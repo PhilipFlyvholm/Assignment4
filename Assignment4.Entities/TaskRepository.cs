@@ -23,13 +23,31 @@ namespace Assignment4.Entities
                 AssignedTo = GetUser(task.AssignedToId),
                 Description = task.Description,
                 State = State.New,
+                StateChanged = DateTime.Now,
+                Created = DateTime.Now
             };
-            throw new NotImplementedException();
+            _context.Tasks.Add(entity);
+            _context.SaveChanges();
+            return (Response.Created, entity.id);
         }
 
         public Response Delete(int taskId)
         {
-            throw new NotImplementedException();
+            var task = Read(taskId);
+            if (task == null) return Response.NotFound;
+            if (task.State.Equals(State.Active))
+            {
+                Update(new TaskUpdateDTO
+                {
+                    Id = taskId,
+                    State = State.Removed
+                });
+                return Response.Deleted;
+            }
+            else
+            {
+                return Response.Conflict;
+            }
         }
 
         public TaskDetailsDTO Read(int taskId)
@@ -47,39 +65,77 @@ namespace Assignment4.Entities
             return tasks.FirstOrDefault();
         }
 
-        private IReadOnlyCollection<string> GetTags(int v, int taskId)
-        {
-            throw new NotImplementedException();
-        }
-
         public IReadOnlyCollection<TaskDTO> ReadAll()
         {
-            throw new NotImplementedException();
+            return new ReadOnlyCollection<TaskDTO>(_context.Tasks.Select(t => new TaskDTO(
+                t.id,
+                t.Title,
+                t.AssignedTo.Name,
+                new ReadOnlyCollection<String>(t.Tags.Select(t => t.Name).ToList()),
+                t.State
+            )).ToList());
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
         {
-            throw new NotImplementedException();
+            return new ReadOnlyCollection<TaskDTO>(_context.Tasks
+            .Where(t => t.State.Equals(state))
+            .Select(t => new TaskDTO(
+            t.id,
+            t.Title,
+            t.AssignedTo.Name,
+            new ReadOnlyCollection<String>(t.Tags.Select(t => t.Name).ToList()),
+            t.State
+            )).ToList());
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
         {
-            throw new NotImplementedException();
+            return new ReadOnlyCollection<TaskDTO>(_context.Tasks
+            .Where(t => t.Tags.Where(tag => tag.Name.Equals(tag)).Count() > 0)
+            .Select(t => new TaskDTO(
+            t.id,
+            t.Title,
+            t.AssignedTo.Name,
+            new ReadOnlyCollection<String>(t.Tags.Select(t => t.Name).ToList()),
+            t.State
+            )).ToList());
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
         {
-            throw new NotImplementedException();
+            return new ReadOnlyCollection<TaskDTO>(_context.Tasks
+            .Where(t => t.AssignedTo.id.Equals(userId))
+            .Select(t => new TaskDTO(
+            t.id,
+            t.Title,
+            t.AssignedTo.Name,
+            new ReadOnlyCollection<String>(t.Tags.Select(t => t.Name).ToList()),
+            t.State
+            )).ToList());
         }
 
         public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
         {
+            return new ReadOnlyCollection<TaskDTO>(_context.Tasks
+            .Where(t => t.State.Equals(State.Removed))
+            .Select(t => new TaskDTO(
+            t.id,
+            t.Title,
+            t.AssignedTo.Name,
+            new ReadOnlyCollection<String>(t.Tags.Select(t => t.Name).ToList()),
+            t.State
+            )).ToList());
             throw new NotImplementedException();
         }
 
         public Response Update(TaskUpdateDTO task)
         {
-            throw new NotImplementedException();
+            var entity = _context.Tasks.Find(task.Id);
+            entity.State = task.State;
+            entity.StateChanged = DateTime.Now;
+            _context.SaveChanges();
+            return Response.Updated;
         }
 
         private User GetUser(int? id) =>

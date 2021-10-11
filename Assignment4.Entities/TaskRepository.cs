@@ -1,156 +1,89 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Data;
+using System.Linq;
 using Assignment4.Core;
-using Microsoft.Data.SqlClient;
 
 namespace Assignment4.Entities
 {
     public class TaskRepository : ITaskRepository
     {
-        private readonly SqlConnection _connection;
+        private readonly KanbanContext _context;
 
-        public TaskRepository(SqlConnection connection)
+        public TaskRepository(KanbanContext context)
         {
-            _connection = connection;
+            _context = context;
         }
 
-
-        public IReadOnlyCollection<TaskDTO> All()
+        public (Response Response, int TaskId) Create(TaskCreateDTO task)
         {
-            var cmdText = @"SELECT t.Id, t.Title, t.AssignedToid, t.Description, t.State
-                            FROM dbo.Tasks AS t";
-            using var command = new SqlCommand(cmdText, _connection);
-
-            OpenConnection();
-
-            using var reader = command.ExecuteReader();
-            var list = new List<TaskDTO>();
-            while (reader.Read())
+            var entity = new Task
             {
-                list.Add(new TaskDTO
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    AssignedToId = reader.GetInt32(2),
-                    Description = reader.GetString(3),
-                    State = Enum.Parse<State>(reader.GetString(4), true),
-                }
-                );
-            }
-
-            CloseConnection();
-            return new ReadOnlyCollection<TaskDTO>(list);
+                Title = task.Title,
+                AssignedTo = GetUser(task.AssignedToId),
+                Description = task.Description,
+                State = State.New,
+            };
+            throw new NotImplementedException();
         }
 
-        public int Create(TaskDTO task)
+        public Response Delete(int taskId)
         {
-            var cmdText = @"INSERT dbo.Tasks(Title, AssignedToid, Description, State)
-                            VALUES (@Title, @AssignedToId, @Description, @State);
-                            SELECT SCOPE_IDENTITY();";
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Title", task.Title);
-            command.Parameters.AddWithValue("@AssignedToid", task.AssignedToId);
-            command.Parameters.AddWithValue("@Description", task.Description);
-            command.Parameters.AddWithValue("@State", task.State.ToString());
-            OpenConnection();
-
-            var id = command.ExecuteScalar();
-
-            CloseConnection();
-
-            return Convert.ToInt32(id);
+            throw new NotImplementedException();
         }
 
-        public void Delete(int taskId)
+        public TaskDetailsDTO Read(int taskId)
         {
-            var cmdText = @"DELETE dbo.Tasks WHERE Id = @Id";
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Id", taskId);
-            OpenConnection();
-
-            command.ExecuteNonQuery();
-
-            CloseConnection();
+            var tasks = _context.Tasks.Where(t => t.id == taskId).Select(t => new TaskDetailsDTO(
+               t.id,
+               t.Title,
+               t.Description,
+               t.Created,
+               t.AssignedTo.Name,
+               new ReadOnlyCollection<String>(t.Tags.Select(t => t.Name).ToList()),
+               t.State,
+               t.StateChanged
+           ));
+            return tasks.FirstOrDefault();
         }
 
-
-        public TaskDetailsDTO FindById(int id)
+        private IReadOnlyCollection<string> GetTags(int v, int taskId)
         {
-            var cmdText = @"SELECT t.Id, t.Title, t.AssignedToid, t.Description, t.State, u.name, u.email
-                            FROM dbo.Tasks AS t
-                            JOIN dbo.Users AS u ON t.AssignedToid = u.id
-                            WHERE t.Id = @Id";
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Id", id);
-
-            OpenConnection();
-
-            using var reader = command.ExecuteReader();
-            var task = reader.Read()
-                ? new TaskDetailsDTO
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    AssignedToId = reader.GetInt32(2),
-                    Description = reader.GetString(3),
-                    State = Enum.Parse<State>(reader.GetString(4), true),
-                    AssignedToName = reader.GetString(5),
-                    AssignedToEmail = reader.GetString(6),
-                }
-                : null;
-
-            CloseConnection();
-
-            return task;
+            throw new NotImplementedException();
         }
 
-        public void Update(TaskDTO task)
+        public IReadOnlyCollection<TaskDTO> ReadAll()
         {
-            var cmdText = @"UPDATE dbo.Tasks SET
-                            Title = @Title,
-                            Description = @Description,
-                            AssignedToid = @AssignedToid,
-                            State = @State
-                            WHERE Id = @Id";
-
-            using var command = new SqlCommand(cmdText, _connection);
-
-            command.Parameters.AddWithValue("@Id", task.Id);
-            command.Parameters.AddWithValue("@Title", task.Title);
-            command.Parameters.AddWithValue("@Description", task.Description);
-            command.Parameters.AddWithValue("@AssignedToid", task.AssignedToId);
-            command.Parameters.AddWithValue("@State", task.State);
-
-            OpenConnection();
-
-            command.ExecuteNonQuery();
-
-            CloseConnection();
+            throw new NotImplementedException();
         }
-        private void OpenConnection()
+
+        public IReadOnlyCollection<TaskDTO> ReadAllByState(State state)
         {
-            if (_connection.State == ConnectionState.Closed)
-            {
-                _connection.Open();
-            }
+            throw new NotImplementedException();
         }
 
-        private void CloseConnection()
+        public IReadOnlyCollection<TaskDTO> ReadAllByTag(string tag)
         {
-            if (_connection.State == ConnectionState.Open)
-            {
-                _connection.Close();
-            }
+            throw new NotImplementedException();
         }
 
-        public void Dispose()
+        public IReadOnlyCollection<TaskDTO> ReadAllByUser(int userId)
         {
-            _connection.Dispose();
+            throw new NotImplementedException();
         }
+
+        public IReadOnlyCollection<TaskDTO> ReadAllRemoved()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Response Update(TaskUpdateDTO task)
+        {
+            throw new NotImplementedException();
+        }
+
+        private User GetUser(int? id) =>
+            _context.Users.FirstOrDefault(u => u.id == id);
     }
 }
+

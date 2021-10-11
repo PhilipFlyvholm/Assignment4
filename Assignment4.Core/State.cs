@@ -2,10 +2,10 @@ namespace Assignment4.Core
 {
     public enum State
     {
-        NEW,
-        ACTIVE,
-        RESOLVED,
-        CLOSED,
-        REMOVED
+        New,
+        Active,
+        Resolved,
+        Closed,
+        Removed
     }
 }
